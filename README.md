@@ -1,0 +1,2 @@
+* The Potential_Gen directory contains the bash scripts required for the first stage (generating the potentials).
+* The Compute_Rates directory then uses these potentials to compute the transition rates and rate coefficients.

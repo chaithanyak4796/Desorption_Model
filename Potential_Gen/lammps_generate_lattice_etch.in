@@ -1,0 +1,115 @@
+########### LAMMPS input script to extract the potential energy curves #########
+########## Here, I perform thermalization, equilibriation and then generate a bunch of lattice displacements files #########
+
+processors * * 2
+
+#variable    T equal 300
+
+variable    T  getenv Temp
+variable    dt equal 0.0002
+variable    P equal  0
+
+units         metal
+
+dimension     3
+boundary      p p p
+atom_style    charge
+
+read_data     graphite_etch_pit.lmp
+
+mass  1  12.0107
+mass  2	 12.0107
+mass  3  12.0107
+mass  4  12.0107
+mass  5  12.0107
+mass  6  12.0107
+
+group l_1 type 1
+group l_2 type 2
+group l_3 type 3
+group l_4 type 4
+group l_5 type 5
+group l_6 type 6
+
+group surface   type 1 2 3 4 5 6
+
+#pair_style   reax/c NULL checkqeq no
+#pair_coeff   * * ffield.reax.cho C C C C C C 
+
+pair_style    comb3 polar_off
+pair_coeff    * * ffield.comb3 C C C C C C
+fix       ceq all qeq/comb 100000 0.0001
+
+#pair_style  lcbop
+#pair_coeff  * * C.lcbop C C C C C C
+
+timestep  ${dt}
+
+#neigh_modify   every 1 delay 1 check no
+
+compute   PE all pe
+compute   KE all ke
+compute   Temp all temp
+variable  TE equal "pe + ke"
+###### Velocity initialization ##########
+
+velocity     l_1  create $T 32541 mom yes rot yes dist gaussian
+velocity     l_2  create $T 34542 mom yes rot yes dist gaussian
+velocity     l_3  create $T 32443 mom yes rot yes dist gaussian
+velocity     l_4  create $T 93244 mom yes rot yes dist gaussian
+velocity     l_5  create $T 23545 mom yes rot yes dist gaussian
+velocity     l_6  create $T 82546 mom yes rot yes dist gaussian
+
+set group l_2 type 1
+set group l_3 type 1
+set group l_4 type 1
+set group l_5 type 1
+set group l_6 type 2
+
+########### Thermalization ##########
+
+fix NPT all nvt temp $T $T $(100.0*dt) #x $P $P $(1000.0*dt) y $P $P $(1000.0*dt) # z $P $P $(1000.0*dt)
+
+thermo_style custom step time temp pe ke pxx pyy pzz lx ly lz
+fix  dump_thermo all ave/time 1 1 10 c_Temp v_TE  file thermo_0.1fs.dat 
+
+thermo 100
+run 100000
+
+unfix NPT
+
+########### Equilibriation ############
+
+fix NVE all nve
+
+thermo 100
+run 100000
+
+######## Store Lattice positions #########
+
+compute com4 l_6 com
+
+restart 10000 therm1.restart therm2.restart
+
+variable  s equal step
+variable  d equal 1
+variable  a equal count(all)
+
+dump dump_coords all custom $d coords.pos  id type q x y z
+dump_modify dump_coords sort id pad 6 element C C C C C O 
+
+#dump        dump_coords_xyz all xyz 1000 coords.xyz
+#dump_modify dump_coords_xyz sort id element C O O O O O
+
+fix check_com all ave/time 1 1 10 c_com4[1] c_com4[2] c_com4[3] file z_surf.dat
+
+print     "$s" file info.dat
+
+thermo_style custom step time temp pe c_com4[1] c_com4[2] c_com4[3] 
+thermo 100
+run 100000
+
+print	  "$s" append info.dat
+print     "$d" append info.dat
+print     "$a" append info.dat
+

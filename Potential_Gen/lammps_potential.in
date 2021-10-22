@@ -1,0 +1,73 @@
+########### LAMMPS input script to extract the potential energy curves #########
+########## Here, I read the displaced lattice file and generate the potential curve by velocity method #########
+
+processors * * 1
+
+variable dt  equal 0.0001    # ps
+variable dz  equal 0.01    # Angstrom
+variable vel equal "-1*v_dz/v_dt" 
+
+units         metal
+
+dimension     3
+boundary      p p p
+atom_style    charge
+
+timestep  ${dt}
+
+variable   lat_file  getenv lat_fname
+variable   pot_fname getenv pot_fname
+
+read_data  ${lat_file} 
+
+mass  1  12.0107
+mass  2	 12.0107
+mass  3  15.999
+
+group surface   type 1 2
+group adsorbate type 3
+
+#pair_style   reax/c NULL checkqeq no
+#pair_coeff   * * ffield.reax.cho C O
+
+pair_style    comb3 polar_off
+pair_coeff    * * ffield.comb3 C C O
+
+#neigh_modify   every 1 delay 1 check no
+
+compute   PE all pe
+
+thermo_style  custom step time fmax fnorm pe lx ly lz
+thermo 100
+
+####### Specify the velocities and forces ######
+fix NVE all nve
+
+compute com adsorbate com
+compute pe all pe
+
+thermo_style custom step time c_com[3]  pe
+
+print " Velocity = ${vel}"
+
+fix freeze_lattice   surface   setforce 0.0 0.0 0.0
+#fix freeze_adsorbate adsorbate setforce 0.0 0.0 0.0
+
+#dump ini_vels adsorbate custom 1 ini_vels.dat id type z vz fx fy fz
+thermo 1
+#run 5
+#undump ini_vels
+
+#unfix freeze_adsorbate
+
+fix freeze_adsorbate adsorbate setforce 0.0 0.0	0.0
+velocity adsorbate set 0.0 0.0 ${vel}
+
+########## Calc the Potential Energy  ##################
+
+fix dump_PE all ave/time 1 1 1 c_com[3] c_pe file ${pot_fname} format %16.8f
+
+thermo 1
+run 475   # If you make any change here, make sure to edit the num_lines variable in RunLAMMPS_Parallel.sh
+
+print "Normal termination"

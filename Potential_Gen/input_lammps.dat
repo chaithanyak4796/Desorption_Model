@@ -1,0 +1,8 @@
+/*** initial structure ***/
+/** input.dat    | structure input file name */
+1.4218       	| lattice constant a
+3.4033        	| lattice constant c
+6       	    | # of unit cells in x direction
+10		    | # of unit cells in y direction
+4		    | # of unit cells in z directioz
+0                   | # of graphene layers in the z direction to be marked as surface

@@ -1,0 +1,57 @@
+########### LAMMPS input script to extract the potential energy curves #########
+########## Here, I perform thermalization, equilibriation and then generate a bunch of lattice displacements files #########
+
+processors * * 2
+
+variable    T equal 300
+variable    dt equal 0.0002
+variable    P equal  0
+
+read_restart therm2.restart
+
+compute   PE all pe
+compute   KE all ke
+compute   Temp all temp
+variable  TE equal "pe + ke"
+
+#pair_style  reax/c NULL checkqeq no
+#pair_coeff  * * ffield.reax.cho C C C C C C
+
+pair_style    comb3 polar_off
+pair_coeff    * * ffield.comb3 C C C C C C
+fix       ceq all qeq/comb 100000 0.0001
+
+########### Fixes ##########
+
+thermo_style custom step time temp pe ke pxx pyy pzz lx ly lz
+fix  dump_thermo all ave/time 1 1 10 c_Temp v_TE  file thermo_0.2fs.dat 
+
+#fix NVE all nve
+fix NPT all nvt temp $T $T $(100.0*dt)
+
+compute com4 l_6 com
+
+restart 10000 therm3.restart therm4.restart
+
+variable  s equal step
+variable  d equal 1
+variable  a equal count(all)
+
+dump dump_coords all custom $d coords2.pos  id type q x y z
+#dump        dump_coords_xyz all xyz 1000 coords.xyz
+#dump_modify dump_coords_xyz sort id element C O O O O O
+dump_modify dump_coords sort id pad 6 element C C C C C O 
+
+#fix check_z all ave/time  1 1 10 c_com4[3] file z_surf.dat
+fix check_com all ave/time 1 1 10 c_com4[1] c_com4[2] c_com4[3] file z_surf2.dat
+
+print     "$s" file info.dat
+
+thermo_style custom step time temp pe c_com4[1] c_com4[2] c_com4[3] 
+thermo 100
+run 100000
+
+print	  "$s" append info.dat
+print     "$d" append info.dat
+print     "$a" append info.dat
+
