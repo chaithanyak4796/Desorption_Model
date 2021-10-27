@@ -21,7 +21,7 @@ Pot_dir="./pot_files"
 
 site=$(sed -n 5p info.dat)
 if [ ${site} == "bridge" ] || [ ${site} == "top" ] ; then
-    struc_file="genC_lammps_surface_charge.cc"
+    struc_file="gen_lattice.py"
     lammps_file="lammps_generate_lattice_bridge.in"
 elif [ ${site} == "edge" ]; then
     struc_file="genC_lammps_etch_pit.cc"
@@ -30,6 +30,9 @@ fi
 
 dt=$(grep "dt equal" ${lammps_file} | grep -Eo '[0-9]([.][0-9]+)?')
 unit=$(grep "units" ${lammps_file} | awk '{print$ 2}')
+n_skip=$(grep "variable  d equal" ${lammps_file} | grep -Eo '[0-9]([.][0-9]+)?')
+dt=$(bc -l <<< "${dt}*${n_skip}")
+
 if [[ unit -eq "metal" ]]; then
     dt=$(bc -l <<< "${dt}*1000" )
     dt=$(printf "%.1f\n" $dt)

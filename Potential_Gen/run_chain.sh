@@ -19,7 +19,7 @@ job0=$(qsub Lattice_Gen.sh)
 echo $job0
 
 job1=$(qsub -W depend=afterok:$job0 Extract_Pot.sh)
-#job1=$(Extract_Pot.sh)
+#job1=$(qsub Extract_Pot.sh)
 echo $job1 
 
 job2=$(qsub -W depend=afterok:$job1 Merge_all.sh)

@@ -1,15 +1,15 @@
 #PBS -S /bin/bash
 
 #PBS -l select=1:ncpus=4:model=san
-#PBS -l walltime=2:00:00
-#PBS -J 1-4000:1000
+#PBS -l walltime=8:00:00
+#PBS -J 1-40000:5000
 #PBS -j oe
 
 #PBS -q normal
 #PBS -W group_list=e1543
 
 begin=$PBS_ARRAY_INDEX
-end=`expr $PBS_ARRAY_INDEX + 999`
+end=`expr $PBS_ARRAY_INDEX + 4999`
 
 cd $PBS_O_WORKDIR
 

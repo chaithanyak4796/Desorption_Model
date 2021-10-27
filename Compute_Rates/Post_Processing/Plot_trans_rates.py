@@ -2,9 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 # plt.close('all')
 
-Dir = "../../temp/CO_Cu-Single/"
+Dir = "/nobackupp2/ckondur/Desorption/Desorption_Model/Results/Oxygen/Bridge_site/Ads-no/"
 
-Temp = np.array([300,400,600,800])
+Temp = np.array([300,400,600,800,1000])
 Des_rate = np.zeros_like(Temp,dtype=float)
 
 plot_cont_en = False
@@ -80,7 +80,7 @@ plt.xlabel('1000/T')
 plt.ylabel('Rate [1/s]')
 
 
-if(1):
+if(0):
     Model = ['Gauss_25_Renorm', 'Lorentzian_100_Bare', 'Lorentzian_100_Renorm']
     for i in range(len(Model)): 
         fname = '../../Data/CO_Cu/' + Model[i] + '.csv'
