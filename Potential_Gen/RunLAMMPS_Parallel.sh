@@ -11,17 +11,21 @@ split_fname=$5
 pot_dir=$6
 
 nprocs=4
-num_lines=478  # Modify this if z array params are changed
-
-source ~/.bash_profile
-module load comp-intel/2018.3.222
-module load mpi-sgi/mpt
-module load python3/Intel_Python_3.6_2018.3.222
 
 pos_fname="./pos_files/coords$icase.pos"
 lat_fname="./pos_files/lattice$icase.pos"
 pot_fname=$pot_dir"/PE_$icase.dat"
 lammps_in="./lammps_potential.in"
+
+#num_lines=478  # Modify this if z array params are changed
+num_lines=$(( $(grep "run" ${lammps_in} | awk '{print $2}') + 3 ))
+
+Error_file="Error.$beg_idx"
+
+source ~/.bash_profile
+module load comp-intel/2018.3.222
+module load mpi-sgi/mpt
+module load python3/Intel_Python_3.6_2018.3.222
 
 #need to create PBS_NODEFILE to run mpiexec
 for i in $(eval echo "{1..$nprocs}")
@@ -65,11 +69,11 @@ if test -f "$pot_fname"; then      # First check if file exists
     
 else   # If file does not exist, just print that info to the error file
     echo "$pot_fname does not exist"
-    #echo $pot_fname >> Error.files
+    echo $beg_idx $icase >> $Error_file
 fi
 
 if (( $perfect == 0)); then
-    echo "$beg_idx $icase " >> Error.files
+    echo "$beg_idx $icase " >> $Error_file
 fi
 
 if (( $perfect == 1 )); then

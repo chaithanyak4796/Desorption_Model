@@ -1,6 +1,6 @@
 #PBS -S /bin/bash
-#PBS -N Gen_Lattice_300
-#PBS -o Gen_Lattice_300.txt
+#PBS -N Gen_Lattice_1000
+#PBS -o Gen_Lattice_1000.txt
 
 #PBS -l select=4:ncpus=16:mpiprocs=16:model=san
 #PBS -l walltime=02:00:00
@@ -9,7 +9,7 @@
 #PBS -W group_list=e1543
 
 export site="bridge"  # Bridge, top, edge
-export Temp=300
+export Temp=1000
 export Potential="COMB3"
 export interaction_model=3     # 1 : Lattice does not contain adatom                                                                                  
                                # 2 : Lattice contains adatom. Bridge site is determined by mean of lattice positions       

@@ -51,14 +51,6 @@ thermo_style custom step time c_com[3]  pe
 print " Velocity = ${vel}"
 
 fix freeze_lattice   surface   setforce 0.0 0.0 0.0
-#fix freeze_adsorbate adsorbate setforce 0.0 0.0 0.0
-
-#dump ini_vels adsorbate custom 1 ini_vels.dat id type z vz fx fy fz
-thermo 1
-#run 5
-#undump ini_vels
-
-#unfix freeze_adsorbate
 
 fix freeze_adsorbate adsorbate setforce 0.0 0.0	0.0
 velocity adsorbate set 0.0 0.0 ${vel}

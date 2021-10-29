@@ -1,6 +1,6 @@
 #PBS -S /bin/bash
-#PBS -N Merge_all
-#PBS -o Merge_all.txt
+#PBS -N Merge_final
+#PBS -o Merge_final.txt
 
 #PBS -l select=1:ncpus=1:model=san
 #PBS -l walltime=01:00:00
@@ -16,6 +16,19 @@ start=`date +%s`
 
 Pos_dir="./pos_files"
 Pot_dir="./pot_files"
+
+#------------- Checking to see if all jobs were succesfull and that info.jobs exists ----------------#
+num=0
+num=$( ls Error.* | wc -l )
+if [ $num -gt 0 ]; then
+ echo "Not all subjobs were successfull. Exiting"
+ exit
+fi
+
+if test ! -f "info.jobs"; then
+    echo "info.jobs does not exist. Exiting to preserve subjob merged files. "
+    exit
+fi
 
 #----------------- Reading the necessary details for output file names ------------------#
 

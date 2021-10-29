@@ -21,6 +21,7 @@ mass  1  12.0107
 mass  2	 12.0107
 mass  3  12.0107
 mass  4  12.0107
+mass  5  15.999
 
 group l_1 type 1
 group l_2 type 2
@@ -33,7 +34,7 @@ group surface   type 1 2 3 4
 #pair_coeff   * * ffield.reax.cho C O
 
 pair_style    comb3 polar_off
-pair_coeff    * * ffield.comb3 C C C C 
+pair_coeff    * * ffield.comb3 C C C C O
 fix           ceq all qeq/comb 100000 0.0001
 
 timestep  ${dt}
@@ -64,7 +65,7 @@ thermo_style custom step time temp pe ke pxx pyy pzz lx ly lz
 fix  dump_thermo all ave/time 1 1 10 c_Temp v_TE  file thermo.dat 
 
 thermo 100
-run 20000
+run 40000
 
 unfix NPT
 
@@ -73,7 +74,7 @@ unfix NPT
 fix NVE all nve
 
 thermo 100
-run 20000
+run 40000
 
 ######## Store Lattice positions #########
 
@@ -82,14 +83,14 @@ compute com4 l_4 com
 restart 10000 therm1.restart therm2.restart
 
 variable  s equal step
-variable  d equal 1
+variable  d equal 2
 variable  a equal count(all)
 
 dump dump_coords all custom $d coords.pos  id type q x y z
-dump_modify dump_coords sort id pad 6 element C C C O 
+dump_modify dump_coords sort id pad 6 element C C C C O 
 
-#dump        dump_coords_xyz all xyz 1000 coords.xyz
-#dump_modify dump_coords_xyz sort id element C C C O
+dump        dump_coords_xyz all xyz 1000 coords.xyz
+dump_modify dump_coords_xyz sort id element C C C C O
 
 fix check_com all ave/time 1 1 10 c_com4[1] c_com4[2] c_com4[3] file z_surf.dat
 
@@ -97,7 +98,7 @@ print     "$s" file info.dat
 
 thermo_style custom step time temp pe c_com4[1] c_com4[2] c_com4[3] 
 thermo 100
-run 40000
+run 80000
 
 print	  "$s" append info.dat
 print     "$d" append info.dat

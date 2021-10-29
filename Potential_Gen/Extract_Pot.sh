@@ -1,12 +1,14 @@
 #PBS -S /bin/bash
 
 #PBS -l select=1:ncpus=4:model=san
-#PBS -l walltime=8:00:00
+#PBS -l walltime=08:00:00
 #PBS -J 1-40000:5000
 #PBS -j oe
 
 #PBS -q normal
 #PBS -W group_list=e1543
+
+repeat=0    # repeat a single subjob : 0/1
 
 begin=$PBS_ARRAY_INDEX
 end=`expr $PBS_ARRAY_INDEX + 4999`
@@ -30,8 +32,6 @@ echo " Computing the average z_com using z_surf.dat"
 z_shift=$( awk  ' NR>=3 { total+=$4; count++ } END {print total/count}' z_surf.dat)
 echo "z_shift = $z_shift "
 
-
-
 ##_______________________________________________________________________________________________________________________##
 
 echo " "
@@ -40,8 +40,9 @@ echo " Running LAMMPS to generate potential energy curves for each displaced lat
 incr=$(sed -n 3p info.dat)
 n_at=$(sed -n 4p info.dat)
 
-
-echo ${begin} >> info.jobs
+if [ $repeat -eq 0 ]; then   # If it is a repeat run, we should not add this to info.jobs
+    echo ${begin} >> info.jobs
+fi
 echo ${begin} ${end}
 
 l1=$(echo "$begin*($n_at+9) + 1" | bc)
@@ -61,6 +62,20 @@ seq -f "%06g"  ${begin} ${end} | parallel -j 4 --sshloginfile "$PBS_NODEFILE" "c
 
 echo " "
 echo " Done collecting the potential files"
+
+##------------------------------ See if any jobs failed and try to run again --------------------------------- ##
+Error_file="Error.$begin"
+if test -f "$Error_file"; then
+    echo "Errors found in this job array."
+    err=( $(cut -d ' ' -f2 $Error_file) )
+    echo "Case numbers of errors : " ${err[@]}
+    rm $Error_file
+
+    len=$(( ${#err[@]} - 1 ))
+
+    printf "%s\n" ${err[@]}  | parallel -j 4 --sshloginfile "$PBS_NODEFILE" "cd $PWD; ./RunLAMMPS_Parallel.sh {} $z_shift $n_at $begin $pos_fname $pot_dir"
+    
+fi
 
 ##_______________________________________________________________________________________________________________________##  
 echo " "

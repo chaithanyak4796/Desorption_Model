@@ -2,7 +2,6 @@
 source /usr/share/modules/init/bash
 
 module load comp-intel/2018.3.222
-#module load mpi-sgi/mpt
 module load python3/Intel_Python_3.6_2018.3.222
 source ~/.bash_profile
 
@@ -13,7 +12,6 @@ end=$2
 pot_dir=$3
 
 num=$(echo "($end-$begin+1)" | bc)
-
 #### ------------ Verifying the number of potenial files ------------#
 pot_num=$(find $pot_dir/ -name "*.dat" | wc -l)
 if [ $num -ne $pot_num ]
@@ -26,11 +24,12 @@ then
 fi
 ##_______________________________________________________________________________________________________________________##  
 
+Error_file="Error.$begin"
 #### ------------- Verifying that all the subjobs ran properly ----------#
-if test -f "Error.files"; then
+if test -f "$Error_file"; then
     perfect=1
     echo "Testing if this job array has any error files."
-    declare $(awk -v awkbeg="$begin" '{if ($1 == awkbeg) {print "perfect=0"} }' "Error.files")
+    declare $(awk -v awkbeg="$begin" '{if ($1 == awkbeg) {print "perfect=0"} }' "${Error_file}")
 
     if (( $perfect == 0 )); then
         echo  "This job array contains  atleast one error file."
