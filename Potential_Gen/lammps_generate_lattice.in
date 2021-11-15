@@ -1,0 +1,93 @@
+########### LAMMPS input script to extract the potential energy curves #########
+########## Here, I perform thermalization, equilibriation and then generate a bunch of lattice displacements files #########
+
+processors * * 2
+
+variable    T getenv Temp
+variable    dt equal 0.0005
+variable    P equal  0
+
+units         metal
+
+dimension     3
+boundary      p p p
+atom_style    charge
+
+read_data     graphite_slab.lmp
+
+mass  1  12.0107
+mass  2  12.0107
+mass  3  15.999
+
+group bottom  type 1
+group top     type 2
+group ads     type 3
+group surface type 1 2 
+
+#pair_style   reax/c NULL checkqeq no
+#pair_coeff   * * ffield.reax.cho C C O
+
+pair_style    comb3 polar_off
+pair_coeff    * * ffield.comb3 C C O
+fix           ceq all qeq/comb 1000000 0.0001
+
+timestep  ${dt}
+
+#neigh_modify   every 1 delay 1 check no
+
+compute   PE all pe
+compute   KE all ke
+compute   Temp all temp
+variable  TE equal "pe + ke"
+compute   com_ads ads com
+compute   Temp_all all temp
+compute   press all pressure Temp_all
+
+##### Initializing coords_dump ############
+dump        dump_coords_xyz all xyz 100 coords.xyz
+dump_modify dump_coords_xyz sort id element C C O
+
+########### NPT ##########
+
+fix NPT all npt temp $T $T $(100.0*dt) x $P $P $(1000.0*dt) y $P $P $(1000.0*dt) #z $P $P $(1000.0*dt)
+
+thermo_style custom step time temp pe ke pxx pyy pzz lx ly lz c_com_ads[3]
+fix  dump_thermo all ave/time 1 1 10 c_Temp v_TE c_press[1] c_press[2] c_press[3] file thermo.dat
+
+thermo 100
+run 20000
+
+unfix NPT
+
+########### Equilibriation ############
+
+fix NVT all nvt temp $T $T $(100.0*dt)
+
+thermo 100
+run 20000
+
+######## Store Lattice positions #########
+
+compute com_top top com
+
+restart 10000 therm1.restart therm2.restart
+
+variable  s equal step
+variable  d equal 10
+variable  a equal count(all)
+
+dump dump_coords all custom $d coords.pos  id type q x y z
+dump_modify dump_coords sort id pad 6 element C C O 
+
+fix check_com all ave/time 1 1 10 c_com_top[1] c_com_top[2] c_com_top[3] file z_surf.dat
+
+print     "$s" file info.dat
+
+thermo_style custom step time temp pe c_com_top[1] c_com_top[2] c_com_top[3] 
+thermo 100
+run 20000
+
+print	  "$s" append info.dat
+print     "$d" append info.dat
+print     "$a" append info.dat
+

@@ -27,7 +27,7 @@ if test -f "info.lattice" ; then
 fi
 
 if [ ${site} == "bridge" ] || [ ${site} == "top" ] ; then
-    lammps_file="lammps_generate_lattice_bridge.in"
+    lammps_file="lammps_generate_lattice.in"
     struc_file="gen_lattice.py"
     python $struc_file $Potential $site $Temp $interaction_model
 
@@ -40,8 +40,6 @@ fi
 
 export struc_file
 export lammps_file
-
-mkdir -p  pos_files pot_files
 
 if test -f "info.dat" ; then
     echo "Removing info.dat"

@@ -1,6 +1,9 @@
 import numpy as np
 import sys
 
+kb = 1.3806E-23  # J/K
+NA = 6.022E23
+
 def Read_Lat_Const(fname):
     pot_name = []
     Lat_const = []
@@ -34,11 +37,13 @@ def Read_Lat_Const(fname):
     return pot_name,Lat_const
 
 class Particle:
-    def __init__(self, idx=1, a_type=1, a_name='C'):
+    def __init__(self, mass=12.0107, idx=1, a_type=1, a_name='C'):
         self.pos  = np.zeros(3)
+        self.vel  = np.zeros(3)
         self.type = a_type
         self.name = a_name
         self.idx  = idx
+        self.mass = mass
 
 def Get_site_idx(site, num_rep, particle_list, info_fname, model):
     if(site == 'Bridge' or site == 'bridge'):
@@ -80,3 +85,30 @@ def Get_site_idx(site, num_rep, particle_list, info_fname, model):
     fw.close()
 
     return site, site_idx
+
+def get_velocities(num_rep,mass,Temp):
+    """ Returns the velocities array in m/s"""
+    num_per_layer = 2 * num_rep[0] * num_rep[1] 
+    num_layers = 2*num_rep[2]
+    N = num_per_layer * num_layers
+
+    m = mass/1000/NA
+    sig = (kb*Temp/m)**0.5
+
+    vel = np.zeros((num_layers,num_per_layer,3))
+    vel = np.random.normal(0.0,sig,vel.shape).reshape(vel.shape)
+
+    for i in range(num_layers):  # Zeroing out the com velocity of each layer
+        v_com   = np.sum(vel[i],axis=0)/num_per_layer
+        vel[i] -= v_com
+
+        #print("v_com  =", np.sum(vel[i],axis=0)/num_per_layer)
+
+    T = m*np.sum(vel**2)/(3*N*kb)
+    vel = vel*(Temp/T)**0.5
+    #print(T)
+
+    T = m*np.sum(vel**2)/(3*N*kb)
+    #print(T)
+
+    return vel

@@ -35,7 +35,7 @@ fi
 site=$(sed -n 5p info.dat)
 if [ ${site} == "bridge" ] || [ ${site} == "top" ] ; then
     struc_file="gen_lattice.py"
-    lammps_file="lammps_generate_lattice_bridge.in"
+    lammps_file="lammps_generate_lattice.in"
 elif [ ${site} == "edge" ]; then
     struc_file="genC_lammps_etch_pit.cc"
     lammps_file="lammps_generate_lattice_etch.in"
@@ -43,10 +43,10 @@ fi
 
 dt=$(grep "dt equal" ${lammps_file} | grep -Eo '[0-9]([.][0-9]+)?')
 unit=$(grep "units" ${lammps_file} | awk '{print$ 2}')
-n_skip=$(grep "variable  d equal" ${lammps_file} | grep -Eo '[0-9]([.][0-9]+)?')
+n_skip=$(grep "variable  d equal" ${lammps_file} | grep -Eo '[0-9]+?')
 dt=$(bc -l <<< "${dt}*${n_skip}")
 
-if [[ unit -eq "metal" ]]; then
+if [[ $unit == "metal" ]]; then
     dt=$(bc -l <<< "${dt}*1000" )
     dt=$(printf "%.1f\n" $dt)
 else
@@ -98,19 +98,20 @@ done
 echo "Done merging all files"
 
 #________________________________________________________________________#
+if test -f $Final_merged; then
+    echo " "
+    echo "Computing the average and fluctuating potentials "
+    python Compute_pot.py $dt $Temp $Final_merged
+    echo " "
 
-echo " "
-echo "Computing the average and fluctuating potentials "
-python Compute_pot.py $dt $Temp $Final_merged
-echo " "
+    #________________________________________________________________________#
 
-#________________________________________________________________________#
-
-echo "  "
-echo "Deleting temporary directories"
-rm -r $Pos_dir $Pot_dir
-echo "Done"
-echo " "
+    echo "  "
+    echo "Deleting temporary directories"
+    rm -r $Pos_dir $Pot_dir
+    echo "Done"
+    echo " "
+fi
 
 end=`date +%s`
 runtime=$((end-start))

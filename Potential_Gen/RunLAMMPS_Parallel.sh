@@ -1,7 +1,7 @@
 #!/bin/bash 
 source /usr/share/modules/init/bash
 
-start=`date +%s`
+start_time=`date +%s`
 
 icase=$1
 z_shift=$2
@@ -80,8 +80,8 @@ if (( $perfect == 1 )); then
     rm  $pos_fname $lat_fname $temp_out_file
 fi
 
-end=`date +%s`
-runtime=$((end-start))
+end_time=`date +%s`
+runtime=$((end_time-start_time))
 
 echo "icase = ${icase},  time = ${runtime}"
 

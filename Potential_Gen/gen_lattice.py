@@ -17,15 +17,21 @@ else:
     print("Error: INcorrect number of arguments.")
     sys.exit(0);
 
-num_rep     = [10,10,2]
-mark_layers = True   # True : Each graphene layer is assigned a different atom_type
+num_rep     = [10,10,3]
+mark_layers = False   # True : Each graphene layer is assigned a different atom_type
 write_xyz   = True
 adatom_name = 'O'
+mass_adatom = 15.999
 
-vac_height  = 20
+vac_height      = 20
 Lat_const_fname = './Lat_const.dat'
 Pos_prefix      = "graphite_slab"
 info_fname      = './info.lattice'
+mass_C          = 12.0107
+
+units = 'metal'
+if(Pot == 'reaxFF' or Pot == 'reaxFF-CHO' or Pot == 'reaxFF-CHON'):
+    units = 'real'
 
 pot_name, Lat_const = Read_Lat_Const(Lat_const_fname)
 
@@ -68,7 +74,17 @@ particle_list = []
 pos = np.zeros((3,))
 base_lattice = np.zeros((3,))
 
+vels = get_velocities(num_rep,mass_C,Temp) # m/s
+T    = (mass_C/1000/NA)*np.sum(vels**2)/(2*4*np.product(num_rep)*kb)
+print ("Temp [K] = ",Temp) 
+if (units == 'metal'):
+    vels *= 1E-2
+else:
+    vels *= 1E-5
+
 idx = 1
+idx_layer = np.zeros(2*num_rep[2],dtype=int)
+
 for i in range(num_rep[0]):
     for j in range(num_rep[1]):
         for k in range(num_rep[2]):
@@ -77,29 +93,42 @@ for i in range(num_rep[0]):
             base_lattice[2] = i*lattice_vec[0][2] + j*lattice_vec[1][2] + k*lattice_vec[2][2]
             
             pos = np.copy(base_lattice)
-            atom_type = 1
-            if(mark_layers): atom_type = 2*k + 1
-            particle_list.append(Particle(idx, atom_type,'C'))
+            vel = vels[2*k][idx_layer[2*k]]
+            idx_layer[2*k] += 1
+            #atom_type = 1
+            atom_type = 2*k + 1
+            particle_list.append(Particle(mass_C, idx, atom_type,'C'))
             particle_list[-1].pos = np.copy(pos)
-            
+            particle_list[-1].vel = np.copy(vel)
+
             pos[0] = base_lattice[0] + 0.5*lat_a
             pos[1] = base_lattice[1] + (0.5/3**0.5) * lat_a
             pos[2] = base_lattice[2] + 0
-            particle_list.append(Particle(idx+1, atom_type,'C'))
+            vel = vels[2*k][idx_layer[2*k]]
+            idx_layer[2*k] += 1
+            particle_list.append(Particle(mass_C, idx+1, atom_type,'C'))
             particle_list[-1].pos = np.copy(pos)
-            
+            particle_list[-1].vel = np.copy(vel)
+
             pos[0] = base_lattice[0] + 0.5*lat_a
             pos[1] = base_lattice[1] + (0.5/3.0**0.5) * lat_a
             pos[2] = base_lattice[2] + 0.5*lat_c
-            if(mark_layers): atom_type = 2*k + 2
-            particle_list.append(Particle(idx+2, atom_type,'C'))
+            vel = vels[2*k+1][idx_layer[2*k+1]]
+            idx_layer[2*k+1] += 1
+            atom_type = 2*k + 2
+            particle_list.append(Particle(mass_C, idx+2, atom_type,'C'))
             particle_list[-1].pos = np.copy(pos)
+            particle_list[-1].vel = np.copy(vel)
             
             pos[0] = base_lattice[0] + 1.0*lat_a
             pos[1] = base_lattice[1] + (1.0/3.0**0.5) * lat_a
             pos[2] = base_lattice[2] + 0.5*lat_c
-            particle_list.append(Particle(idx+3,atom_type,'C'))
+            vel = vels[2*k+1][idx_layer[2*k+1]]
+            idx_layer[2*k+1] += 1
+            particle_list.append(Particle(mass_C, idx+3,atom_type,'C'))
             particle_list[-1].pos = np.copy(pos)
+            particle_list[-1].vel = np.copy(vel)
+
             z_max = np.copy(pos[2])
             idx += 4
 
@@ -110,6 +139,13 @@ box[5] -= z_max
 for i in range(num_atoms):
     particle_list[i].pos[2] -= z_max
 
+if (mark_layers == False):
+    for i in range(num_atoms):
+        particle_list[i].type = 1
+        if (particle_list[i].pos[2] == 0): 
+            particle_list[i].type = 2
+            atom_type = 2
+    
 # Get the atom-indices for the adatom site
 site, site_idx = Get_site_idx(site, num_rep, particle_list, info_fname, interaction_model)
 
@@ -120,14 +156,31 @@ if(interaction_model > 1):
         pos = (particle_list[site_idx[0]-1].pos + particle_list[site_idx[1]-1].pos)/2
         pos[2]    += 1.0
         atom_type += 1
-        particle_list.append(Particle(idx,atom_type,adatom_name))
+        particle_list.append(Particle(mass_adatom, idx, atom_type, adatom_name))
         particle_list[-1].pos = np.copy(pos)
+        particle_list[-1].vel = np.zeros(3)
+        #particle_list[-1].vel = np.copy(particle_list[-2].vel)
     elif(site == 'top'):
         pos = (particle_list[site_idx[0]-1].pos)
         pos[2]    += 1.0
         atom_type += 1
-        particle_list.append(Particle(idx,atom_type,adatom_name))
+        particle_list.append(Particle(mass_adatom, idx, atom_type, adatom_name))
         particle_list[-1].pos = np.copy(pos)
+        particle_list[-1].vel = np.zeros(3)
+
+
+## Zeroing out the com velocities
+com_vel    = np.zeros(3)
+total_mass = 0
+
+for i in range(len(particle_list)):
+    com_vel    += particle_list[i].vel * particle_list[i].mass
+    total_mass += particle_list[i].mass
+
+com_vel = com_vel/total_mass
+print("com_vel before zeroing out : ", com_vel)
+for i in range(len(particle_list)):
+    particle_list[i].vel -= com_vel
 
 # Write pos files
 fname_lmp = Pos_prefix + ".lmp"
@@ -153,5 +206,9 @@ flmp.write("%6.8E  %6.8E  %6.8E  xy xz yz\n\n"%(xyz[0],xyz[1],xyz[2]))
 flmp.write("Atoms\n\n")
 for i in range(num_atoms):
     flmp.write("%5d  %2d  %6.4E  %6.8E  %6.8E  %6.8E\n"%(particle_list[i].idx,particle_list[i].type,0.0,particle_list[i].pos[0],particle_list[i].pos[1],particle_list[i].pos[2]))
-flmp.close()
 
+flmp.write("\nVelocities\n\n")
+for i in range(num_atoms):
+    flmp.write("%5d  %6.8E  %6.8E  %6.8E\n"%(particle_list[i].idx,particle_list[i].vel[0],particle_list[i].vel[1],particle_list[i].vel[2]))
+
+flmp.close()
