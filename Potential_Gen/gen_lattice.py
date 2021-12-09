@@ -17,7 +17,7 @@ else:
     print("Error: INcorrect number of arguments.")
     sys.exit(0);
 
-num_rep     = [10,10,3]
+num_rep     = [10,10,2]
 mark_layers = False   # True : Each graphene layer is assigned a different atom_type
 write_xyz   = True
 adatom_name = 'O'
@@ -42,8 +42,11 @@ if(len(idx_pot) == 0):
 idx_pot = idx_pot[0]
 idx_Temp = np.where(Lat_const[idx_pot][:,0] == Temp)[0]
 if(len(idx_Temp) == 0):
-    print(" Error : Temp not found in the potential.")
-    sys.exit() 
+    print("\n Error : Temp not found in the potential.")
+    print(" Assigning T = 300 K\n")
+   
+    idx_Temp = np.where(Lat_const[idx_pot][:,0] == 300)[0]
+    #sys.exit() 
 idx_Temp = idx_Temp[0]
 
 lat_param = Lat_const[idx_pot][idx_Temp]
@@ -161,8 +164,8 @@ if(interaction_model > 1):
         particle_list[-1].vel = np.zeros(3)
         #particle_list[-1].vel = np.copy(particle_list[-2].vel)
     elif(site == 'top'):
-        pos = (particle_list[site_idx[0]-1].pos)
-        pos[2]    += 1.0
+        pos = np.copy(particle_list[site_idx[0]-1].pos)
+        pos[2]    += 1.3
         atom_type += 1
         particle_list.append(Particle(mass_adatom, idx, atom_type, adatom_name))
         particle_list[-1].pos = np.copy(pos)

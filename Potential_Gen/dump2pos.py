@@ -15,14 +15,14 @@ interaction_model = int(line)
 print("Interaction model = ",interaction_model)
 line = fr.readline().strip("\n")
 bond_style = line
-if(bond_style == "Bridge" or "bridge"):
+if(bond_style == "Bridge" or bond_style == "bridge"):
     bond_style = "bridge"
     C_idx = np.array([0,0])
     line = fr.readline().strip("\n")
     C_idx[0] = float(line)
     line = fr.readline().strip("\n")
     C_idx[1] = float(line)
-elif(bond_style == "Top" or "top"):
+elif(bond_style == "Top" or bond_style == "top"):
     bond_style = "top"
     C_idx = np.array([0])
     line = fr.readline().strip("\n")
