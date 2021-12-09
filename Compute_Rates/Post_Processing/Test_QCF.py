@@ -11,11 +11,22 @@ import sys
 sys.path.append('../')
 from Params import *
 
+if(len(sys.argv) == 1):
+    T = 900
+else:
+    T = int(sys.argv[1])
+
 plt.close('all')
 
-Dir = "../../temp/CO_Cu-Single/"
+dt    = 0.5
+t_max = 40
+label = str(dt) + "fs_" + str(t_max) + "ps"
 
-T = 800
+label='Ads-no'
+Dir = "/media/chaithanya/Chaithanya_New/Surface_Chem/Desorption/Density_Matrix/Results/Oxygen/Bridge_site/"
+Dir = Dir + label + "/"
+
+# T = 1000
 pref = "T_" + str(T) + "K"
 beta = 1/(kb_eV*T)
 
@@ -91,8 +102,8 @@ b_jump = 1
 plt.semilogy(bs_no[:-b_jump],np.diagonal(Wbb,b_jump),label='No QCF')
 plt.semilogy(bs_no[:-b_jump],np.diagonal(Wbb_Std,b_jump),label='QCF: Standard')
 plt.semilogy(bs_no[:-b_jump],np.diagonal(Wbb_Harm,b_jump),label='QCF: Harmonic')
-plt.semilogy(bs_no[:-b_jump],np.diagonal(Wbb_Scho,b_jump),label='QCF: Schofield')
-plt.semilogy(bs_no[:-b_jump],np.diagonal(Wbb_hyb,b_jump),label='QCF: harmonic/Schofield')
+# plt.semilogy(bs_no[:-b_jump],np.diagonal(Wbb_Scho,b_jump),label='QCF: Schofield')
+# plt.semilogy(bs_no[:-b_jump],np.diagonal(Wbb_hyb,b_jump),label='QCF: harmonic/Schofield')
 plt.legend()
 plt.xlabel('n')
 plt.ylabel(r'$W_{n\rightarrow m} [s^{-1}]$')
@@ -101,13 +112,13 @@ plt.figure(2)
 plt.semilogy(bs_no,Wbc,label='No QCF')
 plt.semilogy(bs_no,Wbc_Std,label='QCF: Standard')
 plt.semilogy(bs_no,Wbc_Harm,label='QCF: Harmonic')
-plt.semilogy(bs_no,Wbc_Scho,label='QCF: Schofield')
-plt.semilogy(bs_no,Wbc_hyb,label='QCF: harmonic/Schofield')
+# plt.semilogy(bs_no,Wbc_Scho,label='QCF: Schofield')
+# plt.semilogy(bs_no,Wbc_hyb,label='QCF: harmonic/Schofield')
 plt.legend()
 plt.xlabel('n')
 plt.ylabel(r'$W_{n\rightarrow cont} [s^{-1}]$')
 
-plt.show()
+# plt.show()
 
 if(1):
     fw_name_bb = Dir + pref + "-Harm" + ".Wbb"

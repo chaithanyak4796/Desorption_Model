@@ -1,9 +1,20 @@
 import numpy as np
 import matplotlib.pyplot as plt
-# plt.close('all')
 
-Dir = "/nobackupp2/ckondur/Desorption/Desorption_Model/Results/Oxygen/Bridge_site/Ads-no/"
+dt    = 0.4
+t_max = 50
+label = str(dt) + "fs_" + str(t_max) + "ps"
 
+label='Ads-no'
+Dir = "/media/chaithanya/Chaithanya_New/Surface_Chem/Desorption/Density_Matrix/Results/Oxygen/Bridge_site/"
+# Dir = "/media/chaithanya/Chaithanya_New/Surface_Chem/Desorption/Density_Matrix/Results/Oxygen/Top_site/Model_3/"
+Dir = Dir + label + "/"
+
+# label = 'CO_Cu'
+# Dir = "/media/chaithanya/Chaithanya_New/Surface_Chem/Desorption/Density_Matrix/temp/"
+# Dir = Dir + label + "/"
+
+# Temp = np.array([400,500,600,800,900])
 Temp = np.array([300,400,600,800,1000])
 Des_rate = np.zeros_like(Temp,dtype=float)
 
@@ -16,7 +27,9 @@ s2au  = 1/au2s
 
 for i in range(len(Temp)):
     T = Temp[i]
-    pref = "T_" + str(T) + "K"
+    # pref = "T_" + str(T) + "K"
+    pref = "T_" + str(T) + "K-Harm"
+    
     fname_bb = Dir + pref + ".Wbb"
     fname_bc = Dir + pref + ".Wbc"
 
@@ -30,7 +43,7 @@ for i in range(len(Temp)):
 
     bs_no = np.arange(n_bound)
 
-    if(0):
+    if(1):
         plt.figure(1)
         b_jump = 1
         plt.semilogy(bs_no[:-b_jump],np.diagonal(Wbb,b_jump),label=pref)
@@ -46,6 +59,7 @@ for i in range(len(Temp)):
         plt.ylabel(r'$W_{n\rightarrow cont} [s^{-1}]$')
     
     if(plot_cont_en):
+        plt.figure(3)
         fname_be = Dir + pref + ".Wbe"
         data_be  = np.loadtxt(fname_be)
         E_cont = data_be[0]
@@ -75,27 +89,37 @@ for i in range(len(Temp)):
     Des_rate[i] = k_des
 
 plt.figure(5)
-plt.semilogy(1000/Temp,Des_rate,'-o',label='Semi-classical Model-One_Sided')
+plt.semilogy(1000/Temp,Des_rate,'-o',label=label)
 plt.xlabel('1000/T')
 plt.ylabel('Rate [1/s]')
+plt.legend()
 
 
 if(0):
+    plt.figure(5)
     Model = ['Gauss_25_Renorm', 'Lorentzian_100_Bare', 'Lorentzian_100_Renorm']
     for i in range(len(Model)): 
-        fname = '../../Data/CO_Cu/' + Model[i] + '.csv'
+        fname = '../../../Data/CO_Cu/' + Model[i] + '.csv'
         data = np.loadtxt(fname,delimiter=',')
         plt.semilogy(data[:,0],np.exp(data[:,1]),'o',label=Model[i])
+        # print(data[:,0],np.exp(data[:,1]))
     plt.legend()
+    
     # plt.ylim([1E-4,1E11])
+    
+    # plt.figure(2)
+    # fname = '../../../Data/CO_Cu/Data_CO_Cu_bc.in'
+    # data = np.loadtxt(fname,delimiter=',')
+    # plt.semilogy(data[:,0],10**(data[:,1]),'o',label='Hood')
+    
 
 plt.show()
 
 if(len(Temp)>1):
     log_rate = np.log(Des_rate)
     inv_temp = 1/(kb_eV*Temp)
-    plt.figure(6)
-    plt.plot(inv_temp,log_rate)
+    # plt.figure(6)
+    # plt.plot(inv_temp,log_rate)
     
     kin = np.polyfit(inv_temp,log_rate,1)
     print("E_A [eV] = %.4f"%(-1*kin[0]))
