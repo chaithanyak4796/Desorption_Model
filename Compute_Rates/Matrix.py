@@ -13,6 +13,10 @@ class Matrix:
         self.Wbb = np.zeros((pot.n_bound,pot.n_bound))
         self.Wbe = np.zeros((pot.n_bound,pot.n_cont))
         self.Wbc = np.zeros((pot.n_bound,))
+
+        self.Wbb_corr = np.zeros_like(self.Wbb)
+        self.Wbe_corr = np.zeros_like(self.Wbe)
+        self.Wbc_corr = np.zeros_like(self.Wbc)
         
         self.Temp      = Input.Temp
         self.beta      = 1/kb_Ha/Input.Temp 
@@ -23,14 +27,23 @@ class Matrix:
 
     def compute_transition_rates(self, Input, pot, eigen):
         logging.info(" Computing the Bound - Bound transition rates using %d procs"%(self.n_jobs))
-        self.Wbb = Parallel(n_jobs=self.n_jobs,backend='multiprocessing') (delayed(self.compute_bound_row)(pot,eigen,m) for m in range(pot.n_bound))
-        self.Wbb = np.array(self.Wbb)
+        temp = Parallel(n_jobs=self.n_jobs,backend='multiprocessing') (delayed(self.compute_bound_row)(pot,eigen,m) for m in range(pot.n_bound))
+        self.temp = temp
+        self.Wbb      = [item[0] for item in temp]
+        self.Wbb_corr = [item[1] for item in temp]
+        self.Wbb      = np.array(self.Wbb)
+        self.Wbb_corr = np.array(self.Wbb_corr)
         logging.info(" Done Computing the Bound - Bound transition rates")
         
         logging.info(" Computing the Bound - Continuum transition rates using %d procs"%(self.n_jobs))
-        self.Wbe = Parallel(n_jobs=self.n_jobs,backend='multiprocessing') (delayed(self.compute_cont_row)(pot,eigen,m) for m in range(pot.n_bound))
-        self.Wbe = np.array(self.Wbe)
-        self.Wbc = np.sum(self.Wbe,axis=1)
+        temp = Parallel(n_jobs=self.n_jobs,backend='multiprocessing') (delayed(self.compute_cont_row)(pot,eigen,m) for m in range(pot.n_bound))
+        self.Wbe      = [item[0] for item in temp]
+        self.Wbe_corr = [item[1] for item in temp]
+        self.Wbe      = np.array(self.Wbe)
+        self.Wbe_corr = np.array(self.Wbe_corr)
+        
+        self.Wbc      = np.sum(self.Wbe,axis=1)
+        self.Wbc_corr = np.sum(self.Wbe_corr,axis=1)
         logging.info(" Done Computing the Bound - Continuum transition rates")
         
         logging.info(" Applying Detailed balance for the bound-bound rates.")
@@ -73,25 +86,30 @@ class Matrix:
             wnm = (abs(psd)*dt)**2/(pot.t[-1] - pot.t[0])
             
         if(self.QCF_Model != 'Egl'):
-            wnm = wnm * self.compute_QCF(om_nm)
+            wnm_corr = wnm * self.compute_QCF(om_nm)
         else:
-            wnm = wnm * self.compute_QCF_Egl(om_nm,wnm,Vnm_corr,pot.t)
+            wnm_corr = wnm * self.compute_QCF_Egl(om_nm,wnm,Vnm_corr,pot.t)
             
-        wnm = wnm/(hbar**2)
+        wnm      = wnm/(hbar**2)
+        wnm_corr = wnm_corr/(hbar**2)
         
-        return wnm
+        return wnm, wnm_corr
 
     def compute_bound_row(self,pot,eigen,m):
-        Wn = np.zeros((pot.n_bound,))
+        Wn      = np.zeros((pot.n_bound,))
+        Wn_corr = np.zeros_like(Wn)
+        
         for n in range(m+1,pot.n_bound):
-            Wn[n] = self.compute_ind_rate(pot,eigen,m,n,method=2)
-        return Wn
+            Wn[n], Wn_corr[n] = self.compute_ind_rate(pot,eigen,m,n,method=2)
+        return Wn, Wn_corr
          
     def compute_cont_row(self,pot,eigen,m):
-        Wn = np.zeros((pot.n_cont,))
+        Wn      = np.zeros((pot.n_cont,))
+        Wn_corr = np.zeros_like(Wn)
+        
         for c in range(pot.n_bound, pot.n_bound+pot.n_cont):
-            Wn[c-pot.n_bound] = self.compute_ind_rate(pot,eigen,m,c,method=2)
-        return Wn
+            Wn[c-pot.n_bound], Wn_corr[c-pot.n_bound] = self.compute_ind_rate(pot,eigen,m,c,method=2)
+        return Wn, Wn_corr
     
     def compute_QCF(self,om):
         if(self.QCF_Model == 'None'):
@@ -134,26 +152,37 @@ class Matrix:
         for m in range(pot.n_bound):
             for n in range(m+1,pot.n_bound):
                 om = (pot.E_bound[m] - pot.E_bound[n])
-                self.Wbb[n][m] = self.Wbb[m][n] * np.exp(-self.beta*om)
+                self.Wbb[n][m]      = self.Wbb[m][n] * np.exp(-self.beta*om)
+                self.Wbb_corr[n][m] = self.Wbb_corr[m][n] * np.exp(-self.beta*om)
                 
     def solve_ME(self,pot):
         self.P0 = np.exp(-self.beta*pot.E_bound)
         self.P0 = self.P0/np.sum(self.P0)
         
-        self.W = np.zeros((pot.n_bound,pot.n_bound))
+        self.W      = np.zeros((pot.n_bound,pot.n_bound))
+        self.W_corr = np.zeros_like(self.W)
         
         for n in range(pot.n_bound):
             for k in range(pot.n_bound):
-                self.W[n][n] += self.Wbb[n][k]
-            self.W[n][n] += self.Wbc[n]
-            for m in range(pot.n_bound):
-                self.W[n][m] -=  self.Wbb[m][n]
+                self.W[n][n]      += self.Wbb[n][k]
+                self.W_corr[n][n] += self.Wbb_corr[n][k]
                 
+            self.W[n][n]      += self.Wbc[n]
+            self.W_corr[n][n] += self.Wbc_corr[n]
+
+            for m in range(pot.n_bound):
+                self.W[n][m]      -=  self.Wbb[m][n]
+                self.W_corr[n][m] -= self.Wbb_corr[m][n]
+
         self.tau_des = np.sum(np.linalg.inv(self.W)@self.P0)
         self.k_des   = 1/self.tau_des
 
-        logging.info("\n   Overall desorption rate constant [1/s] = %6.8E"%(self.k_des*s2au))        
-                
+        self.tau_des_corr = np.sum(np.linalg.inv(self.W_corr)@self.P0)
+        self.k_des_corr   = 1/self.tau_des_corr
+
+        logging.info("\n   Overall desorption rate constant [1/s]               = %6.8E"%(self.k_des*s2au))        
+        logging.info("\n   Overall QCF corrected desorption rate constant [1/s] = %6.8E"%(self.k_des_corr*s2au))
+        
     def Write_transition_rates(self,Input,pot,pref):
         
         out_bb = Input.Out_Dir + pref + ".Wbb"
@@ -163,11 +192,25 @@ class Matrix:
         file_bb = open(out_bb,"w")
         file_bc = open(out_bc,"w")
         file_be = open(out_be,"w")
-        
+
+        if(self.QCF_Model != "None"):
+            out_bb_corr = Input.Out_Dir + pref + "-" + self.QCF_Model + ".Wbb"
+            out_bc_corr = Input.Out_Dir + pref + "-" + self.QCF_Model + ".Wbc"
+            out_be_corr = Input.Out_Dir + pref + "-" + self.QCF_Model + ".Wbe"
+            
+            file_bb_corr = open(out_bb_corr,"w")
+            file_bc_corr = open(out_bc_corr,"w")
+            file_be_corr = open(out_be_corr,"w")
+
+                                                
         logging.info(" Converting the transition rates to 1/s.")
         self.Wbb *= s2au
         self.Wbe *= s2au
         self.Wbc *= s2au
+
+        self.Wbb_corr *= s2au
+        self.Wbe_corr *= s2au
+        self.Wbc_corr *= s2au
         
         # Bound - Bound 
         for m in range(pot.n_bound):
@@ -189,10 +232,38 @@ class Matrix:
             for e in range(pot.n_cont):
                 file_be.write("%4.6E "%(self.Wbe[m][e]))
             file_be.write("\n")
+
+        if(self.QCF_Model != "None"):
+            # Bound - Bound 
+            for m in range(pot.n_bound):
+                file_bb_corr.write("%4.6E "%(pot.E_bound[m]/eV2Ha))
+            file_bb_corr.write("\n")
+
+            for m in range(pot.n_bound):
+                for n in range(pot.n_bound):
+                    file_bb_corr.write("%4.6E "%(self.Wbb_corr[m][n]))
+                file_bb_corr.write("\n")
+
+            # Bound - Continuum
+            for e in range(pot.n_cont):
+                file_be_corr.write("%4.6E "%(pot.E_cont[e]/eV2Ha))
+            file_be_corr.write("\n")
+        
+            for m in range(pot.n_bound):
+                file_bc_corr.write("%02d  %4.6E \n"%(m,self.Wbc_corr[m]))
+                for e in range(pot.n_cont):
+                    file_be_corr.write("%4.6E "%(self.Wbe_corr[m][e]))
+                file_be_corr.write("\n")
+
+            file_bb_corr.close()
+            file_bc_corr.close()
+            file_be_corr.close()
         
         file_bb.close()
         file_bc.close()
         file_be.close()
+
+        
         
     #_____________ Testing functions _________________#
     def Test_Corr(self,pot,eigen,m,n):
@@ -208,7 +279,7 @@ class Matrix:
         
         Vnm_corr = acorr(Vnm,norm=False)/len(Vnm)
         plt.figure(10)
-        plt.plot(pot.t/ps_au,Vnm_corr,'-',label="(%d,%d)"%(m,n))
+        plt.plot(pot.t/ps_au,Vnm_corr,'.',label="(%d,%d)"%(m,n))
         plt.legend()
         plt.xlabel('t [ps]')
         

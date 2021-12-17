@@ -33,13 +33,7 @@ fi
 #----------------- Reading the necessary details for output file names ------------------#
 
 site=$(sed -n 5p info.dat)
-if [ ${site} == "bridge" ] || [ ${site} == "top" ] ; then
-    struc_file="gen_lattice.py"
-    lammps_file="lammps_generate_lattice.in"
-elif [ ${site} == "edge" ]; then
-    struc_file="genC_lammps_etch_pit.cc"
-    lammps_file="lammps_generate_lattice_etch.in"
-fi
+lammps_file=$(sed -n 7p info.dat)
 
 dt=$(grep "dt equal" ${lammps_file} | grep -Eo '[0-9]([.][0-9]+)?')
 unit=$(grep "units" ${lammps_file} | awk '{print$ 2}')

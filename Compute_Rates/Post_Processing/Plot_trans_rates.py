@@ -2,20 +2,25 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 dt    = 0.4
-t_max = 50
+t_max = 40
 label = str(dt) + "fs_" + str(t_max) + "ps"
 
-label='Ads-no'
-Dir = "/media/chaithanya/Chaithanya_New/Surface_Chem/Desorption/Density_Matrix/Results/Oxygen/Bridge_site/"
-# Dir = "/media/chaithanya/Chaithanya_New/Surface_Chem/Desorption/Density_Matrix/Results/Oxygen/Top_site/Model_3/"
+# label='Ads-no'
+# Dir = "/media/chaithanya/Chaithanya_New/Surface_Chem/Desorption/Density_Matrix/Results/Oxygen/Bridge_site/"
+Dir = "/media/chaithanya/Chaithanya_New/Surface_Chem/Desorption/Density_Matrix/Results/Oxygen/Edge_site/Model_3/"
 Dir = Dir + label + "/"
 
-# label = 'CO_Cu'
+# label = 'CO_Cu/QCF_corr'
 # Dir = "/media/chaithanya/Chaithanya_New/Surface_Chem/Desorption/Density_Matrix/temp/"
 # Dir = Dir + label + "/"
 
+label = "Method_2"
+Dir = "/media/chaithanya/Chaithanya_New/Surface_Chem/Desorption/Density_Matrix/Results/Oxygen/Bridge_site/Test_dz/"
+Dir = Dir + label + "/"
+
 # Temp = np.array([400,500,600,800,900])
-Temp = np.array([300,400,600,800,1000])
+# Temp = np.array([300,400,600,800,1000])
+Temp = np.array([300,800])
 Des_rate = np.zeros_like(Temp,dtype=float)
 
 plot_cont_en = False
@@ -27,8 +32,8 @@ s2au  = 1/au2s
 
 for i in range(len(Temp)):
     T = Temp[i]
-    # pref = "T_" + str(T) + "K"
-    pref = "T_" + str(T) + "K-Harm"
+    # pref = "T_" + str(T) + "K-Harm"
+    pref = "T_" + str(T) + "K"
     
     fname_bb = Dir + pref + ".Wbb"
     fname_bc = Dir + pref + ".Wbc"

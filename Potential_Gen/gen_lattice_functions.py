@@ -50,7 +50,7 @@ def Get_site_idx(site, num_rep, particle_list, info_fname, model):
         site = "bridge"
         site_idx = np.zeros(2,dtype=int)
         i = num_rep[0]//2 - 1
-        j  = num_rep[1]//2 - 1
+        j = num_rep[1]//2 - 1
         k = num_rep[2] 
         base_idx = (i*num_rep[1]*num_rep[2] + j*num_rep[2] + k) * 4
         site_idx[0] = base_idx - 2 + 1
@@ -70,6 +70,13 @@ def Get_site_idx(site, num_rep, particle_list, info_fname, model):
         site_idx[0] = base_idx - 2 + 1
         print(site_idx)
         print(particle_list[site_idx[0] - 1].pos)
+        
+    elif(site == "Edge" or site == "edge"):
+        site = "edge"
+        site_idx = np.zeros(1,dtype=int)
+        return site, site_idx
+
+
     else:
         print(" Error : invalid site type.")
         sys.exit(0)
@@ -85,6 +92,81 @@ def Get_site_idx(site, num_rep, particle_list, info_fname, model):
     fw.close()
 
     return site, site_idx
+
+def Get_edge_site_idx(particle_list, info_fname, model, top_layer, lat_a, pit_D, pit_H, center, edge_type):
+     # Find the edge sites
+    surr = []
+    edge = []
+    zig_zag   = []
+    arm_chair = []
+    
+    # Sweep the top layer to identify atoms close to the edge sites
+    for j in top_layer:
+        pos = particle_list[j].pos
+        extra_a = lat_a
+        pit = np.array([pit_D/2+lat_a,pit_D/2+lat_a,pit_H+2])
+        pos = (pos-center)/pit
+        dis = np.linalg.norm(pos)
+        if(dis <= 1.0):
+            particle_list[j].name = 'C'
+            surr.append(j)
+    print("Number of potential edge sites after first sweep = ", len(surr))
+    
+    # Idenitfy the edge sites by caomputing the coordination numbers of the identified atoms
+    num_edge = 0
+    for i in surr:
+        coord_num = 0;
+        pos_i = particle_list[i].pos
+        for j in top_layer:
+            pos_j = particle_list[j].pos
+            dis = np.linalg.norm(pos_i-pos_j)
+            if(dis <= 1.05*lat_a/3**0.5):   # 5% tolerance
+                coord_num += 1
+        if(coord_num == 3):   # 3 because we're not excluding i=j
+            # print(i)
+            particle_list[i].name = 'N'
+            edge.append(i)
+            num_edge += 1
+    print("Number of edge sites = ", num_edge)
+            
+    # Classify the edge sites as zig-zag or arm-chair by computing the partial coordination numbers 
+    for i in edge:
+        coord_num = 0
+        pos_i = particle_list[i].pos
+        for j in edge:
+            pos_j = particle_list[j].pos
+            dis = np.linalg.norm(pos_i-pos_j)
+            if(dis <= 1.05*lat_a/3**0.5):   # 5% tolerance
+                coord_num += 1
+        if(coord_num == 2):
+            particle_list[i].name = 'N'
+            arm_chair.append(i)
+        else:
+            particle_list[i].name = 'O'
+            zig_zag.append(i)
+    print(" Number of zig-zag   configurations = ",len(zig_zag))
+    print(" Number of arm-chair configurations = ",len(arm_chair))
+    
+    site_idx = np.zeros(1,dtype=int)
+    if(edge_type == 'zig-zag'):
+        site_idx[0] = zig_zag[0] + 1   # LAMMPS idx starts from 1
+    else:
+        site_idx[0] = arm_chair[0] + 1
+        
+    print(site_idx)
+    print(particle_list[site_idx[0] - 1].pos)
+    
+    fw = open(info_fname,"w")
+    fw.write("%d\n"%(model))            # Interaction model
+    fw.write("%s\n"%('edge'))             # Site type
+    for i in range(len(site_idx)):
+        fw.write("%d\n"%(site_idx[i]))  # Lattice indices
+    for i in range(len(site_idx)):      # Lattice coordinates
+        fw.write("%.6f  %.6f  %.6f \n"%(particle_list[site_idx[i] - 1].pos[0],particle_list[site_idx[i] - 1].pos[1],particle_list[site_idx[i] - 1].pos[2]))
+    
+    fw.close()
+
+    return site_idx, zig_zag, arm_chair
 
 def get_velocities(num_rep,mass,Temp):
     """ Returns the velocities array in m/s"""

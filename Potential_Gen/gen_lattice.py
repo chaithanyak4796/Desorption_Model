@@ -8,16 +8,33 @@ if(len(sys.argv) == 5):
     site = str(sys.argv[2])
     Temp = float(sys.argv[3])
     interaction_model = int(sys.argv[4])
+    if (site == 'Edge' or site == 'edge'):
+        print("Error: Etch pit diameter and height not given.")
+        sys.exit(0)
+if(len(sys.argv) == 8):
+    Pot  = str(sys.argv[1])
+    site = str(sys.argv[2])
+    edge_type = str(sys.argv[3])
+    Temp = float(sys.argv[4])
+    interaction_model = int(sys.argv[5])
+    pit_D = float(sys.argv[6])
+    pit_H = float(sys.argv[7])
+    
 elif(len(sys.argv) == 1):
     Pot  = 'COMB3'
-    site = "Bridge"
+    site = "Edge"
+    edge_type = "arm-chair"
     Temp = 1000
-    interaction_model = 2
+    interaction_model = 3
+    pit_D = 16
+    pit_H = 6
+    
 else:
-    print("Error: INcorrect number of arguments.")
-    sys.exit(0);
+    print("Error: Incorrect number of arguments.")
+    sys.exit(0)
+    
 
-num_rep     = [10,10,2]
+num_rep     = [16,16,3]
 mark_layers = False   # True : Each graphene layer is assigned a different atom_type
 write_xyz   = True
 adatom_name = 'O'
@@ -29,6 +46,7 @@ Pos_prefix      = "graphite_slab"
 info_fname      = './info.lattice'
 mass_C          = 12.0107
 
+# Get the Lattice constants 
 units = 'metal'
 if(Pot == 'reaxFF' or Pot == 'reaxFF-CHO' or Pot == 'reaxFF-CHON'):
     units = 'real'
@@ -55,6 +73,7 @@ print("Lattice params found = ",lat_param)
 lat_a = lat_param[1]*3**0.5
 lat_c = lat_param[2]*2
 
+# LAMMPS box data 
 unit_cell_len = np.array([lat_a, lat_a*3**0.5, 2*lat_c])
 
 lattice_vec       = np.zeros((3,3))
@@ -72,6 +91,7 @@ box[3] = 0.5 * 3**0.5 * lat_a * num_rep[1]
 box[4] = -1 * vac_height
 box[5] =  1 * vac_height + lat_c * num_rep[2] 
 
+# Generate the atoms pos and vels 
 num_atoms = 4 * np.product(num_rep)
 particle_list = []
 pos = np.zeros((3,))
@@ -136,6 +156,7 @@ for i in range(num_rep[0]):
             idx += 4
 
 num_atoms = len(particle_list)
+
 # Adjust the z coordinates
 box[4] -= z_max
 box[5] -= z_max
@@ -148,18 +169,43 @@ if (mark_layers == False):
         if (particle_list[i].pos[2] == 0): 
             particle_list[i].type = 2
             atom_type = 2
+
+top_layer = []
+# Create an etch pit
+if (site == 'Edge' or site == 'edge'):
+    print("Original number of atoms = ",num_atoms)
+    center = np.array([(box[1]-box[0]+xyz[0])/2,(box[3]-box[2])/2,0])
+    j = 0
+    for i in range(num_atoms):
+        pos = particle_list[j].pos
+        
+        pit = np.array([pit_D/2,pit_D/2,pit_H])
+        pos = (pos-center)/pit
+        dis = np.linalg.norm(pos)
+        if(dis <= 1.0):
+            particle_list.pop(j)
+        else:
+            if (pos[2] == 0):
+                top_layer.append(j)
+                particle_list[j].name='C'
+            j = j+1
+
+    num_atoms = len(particle_list)
+    print("New number of atoms = ",num_atoms)
+    for i in range(num_atoms):
+        particle_list[i].idx = i+1
     
-# Get the atom-indices for the adatom site
-site, site_idx = Get_site_idx(site, num_rep, particle_list, info_fname, interaction_model)
 
 # Adding the adatom
 if(interaction_model > 1):
+    # Get the atom-indices for the adatom site
+    site, site_idx = Get_site_idx(site, num_rep, particle_list, info_fname, interaction_model)
     pos = np.zeros(3)
     if(site == 'bridge'):
         pos = (particle_list[site_idx[0]-1].pos + particle_list[site_idx[1]-1].pos)/2
         pos[2]    += 1.0
         atom_type += 1
-        particle_list.append(Particle(mass_adatom, idx, atom_type, adatom_name))
+        particle_list.append(Particle(mass_adatom, particle_list[-1].idx+1, atom_type, adatom_name))
         particle_list[-1].pos = np.copy(pos)
         particle_list[-1].vel = np.zeros(3)
         #particle_list[-1].vel = np.copy(particle_list[-2].vel)
@@ -167,7 +213,17 @@ if(interaction_model > 1):
         pos = np.copy(particle_list[site_idx[0]-1].pos)
         pos[2]    += 1.3
         atom_type += 1
-        particle_list.append(Particle(mass_adatom, idx, atom_type, adatom_name))
+        particle_list.append(Particle(mass_adatom, particle_list[-1].idx+1, atom_type, adatom_name))
+        particle_list[-1].pos = np.copy(pos)
+        particle_list[-1].vel = np.zeros(3)
+        
+    elif(site == 'edge'):
+        site_idx, zig_zag, arm_chair = Get_edge_site_idx(particle_list, info_fname, interaction_model,
+                                                         top_layer, lat_a, pit_D, pit_H, center, edge_type)
+        pos = np.copy(particle_list[site_idx[0]-1].pos)
+        pos[2]    += 1.5
+        atom_type += 1
+        particle_list.append(Particle(mass_adatom, particle_list[-1].idx+1, atom_type, adatom_name))
         particle_list[-1].pos = np.copy(pos)
         particle_list[-1].vel = np.zeros(3)
 

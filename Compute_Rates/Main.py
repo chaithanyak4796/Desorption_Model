@@ -21,7 +21,7 @@ import Matrix
 plt.close('all')
 
 if(len(sys.argv) == 1):
-    Input_fname = './Input_files/Input.cfg'
+    Input_fname = './Input_files/Input-WS.cfg'
 elif(len(sys.argv) == 2):
     Input_fname = str(sys.argv[1])
 else:
@@ -37,8 +37,8 @@ print(Input.Inp_Dir)
 
 ##### Create the logger ###########
 Log_fname=Input.Log_fname
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
-#logging.basicConfig(filename=Log_fname, filemode='w', level=logging.INFO, format='%(levelname)s: %(message)s')
+#logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logging.basicConfig(filename=Log_fname, filemode='w', level=logging.INFO, format='%(levelname)s: %(message)s')
 logging.info('Begining the run')
 
 ######## Create the Eigen class ###########
@@ -48,7 +48,7 @@ eigen = eigen_states_DVR.Eigen(Input)
 pot = Hamiltonian.Potentials(Input)
 pot.solve_H0(eigen)
 print(" Done solving the TISE.")
-sys.exit()
+#sys.exit()
 ###### Initialize the matrices ############
 soln = Matrix.Matrix(pot,Input)
 print(" Done initializng the solution matrix.")

@@ -12,18 +12,18 @@ sys.path.append('../')
 from Params import *
 
 if(len(sys.argv) == 1):
-    T = 900
+    T = 300
 else:
     T = int(sys.argv[1])
 
 plt.close('all')
 
-dt    = 0.5
+dt    = 0.4
 t_max = 40
 label = str(dt) + "fs_" + str(t_max) + "ps"
 
-label='Ads-no'
-Dir = "/media/chaithanya/Chaithanya_New/Surface_Chem/Desorption/Density_Matrix/Results/Oxygen/Bridge_site/"
+# label='Ads-no'
+Dir = "/media/chaithanya/Chaithanya_New/Surface_Chem/Desorption/Density_Matrix/Results/Oxygen/Edge_site/Model_3/"
 Dir = Dir + label + "/"
 
 # T = 1000
