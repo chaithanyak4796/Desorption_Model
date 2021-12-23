@@ -37,8 +37,8 @@ print(Input.Inp_Dir)
 
 ##### Create the logger ###########
 Log_fname=Input.Log_fname
-#logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
-logging.basicConfig(filename=Log_fname, filemode='w', level=logging.INFO, format='%(levelname)s: %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+#logging.basicConfig(filename=Log_fname, filemode='w', level=logging.INFO, format='%(levelname)s: %(message)s')
 logging.info('Begining the run')
 
 ######## Create the Eigen class ###########

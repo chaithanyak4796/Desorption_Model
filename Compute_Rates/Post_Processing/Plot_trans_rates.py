@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-dt    = 0.4
+dt    = 0.2
 t_max = 40
 label = str(dt) + "fs_" + str(t_max) + "ps"
 
@@ -10,17 +10,17 @@ label = str(dt) + "fs_" + str(t_max) + "ps"
 Dir = "/media/chaithanya/Chaithanya_New/Surface_Chem/Desorption/Density_Matrix/Results/Oxygen/Edge_site/Model_3/"
 Dir = Dir + label + "/"
 
-# label = 'CO_Cu/QCF_corr'
-# Dir = "/media/chaithanya/Chaithanya_New/Surface_Chem/Desorption/Density_Matrix/temp/"
-# Dir = Dir + label + "/"
-
-label = "Method_2"
-Dir = "/media/chaithanya/Chaithanya_New/Surface_Chem/Desorption/Density_Matrix/Results/Oxygen/Bridge_site/Test_dz/"
+label = 'Filon_yes'
+Dir = "/media/chaithanya/Chaithanya_New/Surface_Chem/Desorption/Density_Matrix/temp/CO_Cu/Integration/"
 Dir = Dir + label + "/"
+
+#label = "Method_2"
+#Dir = "/media/chaithanya/Chaithanya_New/Surface_Chem/Desorption/Density_Matrix/Results/Oxygen/Bridge_site/Test_dz/"
+#Dir = Dir + label + "/"
 
 # Temp = np.array([400,500,600,800,900])
 # Temp = np.array([300,400,600,800,1000])
-Temp = np.array([300,800])
+Temp = np.array([300])
 Des_rate = np.zeros_like(Temp,dtype=float)
 
 plot_cont_en = False
@@ -32,7 +32,7 @@ s2au  = 1/au2s
 
 for i in range(len(Temp)):
     T = Temp[i]
-    # pref = "T_" + str(T) + "K-Harm"
+    # pref = "T_" + str(T) + "K-2.0ps-Harm"
     pref = "T_" + str(T) + "K"
     
     fname_bb = Dir + pref + ".Wbb"
@@ -51,7 +51,7 @@ for i in range(len(Temp)):
     if(1):
         plt.figure(1)
         b_jump = 1
-        plt.semilogy(bs_no[:-b_jump],np.diagonal(Wbb,b_jump),label=pref)
+        plt.semilogy(bs_no[:-b_jump],np.diagonal(Wbb,b_jump),'-',label=pref)
         #plt.semilogy(bs_no[:-2],np.diagonal(Wbb,2),label='n->n+2')
         plt.legend()
         plt.xlabel('n')

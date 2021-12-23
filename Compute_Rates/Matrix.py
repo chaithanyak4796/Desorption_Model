@@ -22,6 +22,8 @@ class Matrix:
         self.beta      = 1/kb_Ha/Input.Temp 
         self.QCF_Model = Input.QCF_Model
         
+        self.use_Filon = True
+        
         if(self.QCF_Model == 'Egl'):
             self.Egelstaff_initialize(pot.t)
 
@@ -75,15 +77,64 @@ class Matrix:
         for i in range(len(Vnm)):
             f = eig_n * pot.Vf[i] * eig_m
             Vnm[i] = integrate.simps(f,pot.z)
-
+            
+        if(self.use_Filon):
+            if(len(pot.t) % 2 == 0):
+                print(" ERROR : Odd number of time steps necessary for Filon quadrature implementation. ")
+                sys.exit()
+            dt       = pot.t[1] - pot.t[0]
+            theta    = om_nm*dt            
+            
         if(method == 1):
             Vnm_corr = acorr(Vnm,norm=False)/len(Vnm)
-            wnm = 2 * integrate.trapz(Vnm_corr*np.cos(om_nm*pot.t),pot.t)
+            if (self.use_Filon == False):
+                wnm = 2 * integrate.trapz(Vnm_corr*np.cos(om_nm*pot.t),pot.t)
+            else:
+                if(om_nm == 0):
+                    wnm = 2 * integrate.trapz(Vnm_corr*np.cos(om_nm*pot.t),pot.t)
+                else:
+                    alpha_filon, beta_filon, gamma_filon = self.get_filon_params(theta)
+
+                    temp = Vnm_corr * np.cos(om_nm*pot.t)
+                    C_e = sum(temp[::2]) - (temp[-1] + temp[0])/2
+                    C_o = sum(temp[1::2])
+    
+                    wnm  = alpha_filon * ( Vnm_corr[-1]*np.sin(om_nm*pot.t[-1]) - Vnm_corr[0]*np.sin(om_nm*pot.t[0]) )
+                    wnm += beta_filon  * C_e + gamma_filon * C_o
+    
+                    wnm = abs(wnm * 2 * dt)
+                
         elif(method == 2):
             psd = 0
-            dt = pot.t[1] - pot.t[0]
-            psd = np.sum(Vnm*np.exp(-1j*om_nm*pot.t))
-            wnm = (abs(psd)*dt)**2/(pot.t[-1] - pot.t[0])
+            if(self.use_Filon == False or om_nm == 0):
+                dt = pot.t[1] - pot.t[0]
+                psd = np.sum(Vnm*np.exp(-1j*om_nm*pot.t))
+                wnm = (abs(psd)*dt)**2/(pot.t[-1] - pot.t[0])
+            else:
+                alpha_filon, beta_filon, gamma_filon = self.get_filon_params(theta)
+                temp_s = Vnm * np.sin(om_nm*pot.t)
+                temp_c = Vnm * np.cos(om_nm*pot.t)
+
+                C_e = sum(temp_c[::2])  - (temp_c[-1] + temp_c[0])/2
+                C_o = sum(temp_c[1::2])
+                
+                I_c  = alpha_filon* (Vnm[-1]*np.sin(om_nm*pot.t[-1]) - Vnm[0]*np.sin(om_nm*pot.t[0]))
+                I_c += beta_filon*C_e + gamma_filon*C_o
+                I_c *= dt
+
+                S_e = sum(temp_s[::2])  - (temp_s[-1] + temp_s[0])/2
+                S_o = sum(temp_s[1::2])
+                
+                I_s  = -1*alpha_filon* (Vnm[-1]*np.cos(om_nm*pot.t[-1]) - Vnm[0]*np.cos(om_nm*pot.t[0]))
+                I_s += beta_filon*S_e + gamma_filon*S_o
+                I_s *= dt
+                
+                wnm = (I_c**2 + I_s**2)/(pot.t[-1] - pot.t[0])
+                
+                # I = I_c + 1j * I_s
+                # wnm = abs(I)**2/(pot.t[-1] - pot.t[0])
+                
+                
             
         if(self.QCF_Model != 'Egl'):
             wnm_corr = wnm * self.compute_QCF(om_nm)
@@ -94,6 +145,13 @@ class Matrix:
         wnm_corr = wnm_corr/(hbar**2)
         
         return wnm, wnm_corr
+    
+    def get_filon_params(self, theta):
+         alpha_filon = 1/theta + np.sin(2*theta)/(2*theta**2) - 2*(np.sin(theta))**2/theta**3
+         beta_filon  = 2*((1+(np.cos(theta))**2)/theta**2 - np.sin(2*theta)/theta**3)
+         gamma_filon = (4/theta**2)*(np.sin(theta)/theta - np.cos(theta))
+         
+         return alpha_filon, beta_filon, gamma_filon
 
     def compute_bound_row(self,pot,eigen,m):
         Wn      = np.zeros((pot.n_bound,))
@@ -277,11 +335,24 @@ class Matrix:
             Vnm[i] = integrate.simps(f,pot.z)
 
         
-        Vnm_corr = acorr(Vnm,norm=False)/len(Vnm)
+        Vnm_corr = acorr(Vnm,norm=False)/len(Vnm) * np.cos(om_nm*pot.t)
         plt.figure(10)
-        plt.plot(pot.t/ps_au,Vnm_corr,'.',label="(%d,%d)"%(m,n))
+        plt.plot(pot.t/ps_au,Vnm_corr,'-o',label="(%d,%d)"%(m,n))
         plt.legend()
         plt.xlabel('t [ps]')
         
+    def Test_Vmn(self,pot,eigen,m,n):
+        eig_n = eigen.get_eigenstate(pot,n)
+        eig_m = eigen.get_eigenstate(pot,m)
+        om_nm = (pot.Energy[n] - pot.Energy[m])/hbar
+
+        Vnm = np.zeros(pot.Vf.shape[0])
+        for i in range(len(Vnm)):
+            f = eig_n * pot.Vf[i] * eig_m
+            Vnm[i] = integrate.simps(f,pot.z)
         
+        plt.figure(11)
+        plt.plot(pot.t/ps_au,Vnm,'.',label="(%d,%d)"%(m,n))
+        plt.legend()
+        plt.xlabel('t [ps]')
 

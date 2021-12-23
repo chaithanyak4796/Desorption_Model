@@ -46,6 +46,11 @@ class Potentials:
         self.dt = self.dt * 1E-3  # Converting from fs to ps
         self.t = np.arange(0,self.Vf.shape[0]) * self.dt * ps_au
 
+        if(len(self.t) % 2 == 0):
+            logging.info(" Found even number of time steps. Discarding the final time step.")
+            self.t  = self.t[:-1]
+            self.Vf = self.Vf[:-1,:]
+
         logging.info(" Potentials : dz    [A]  = %.4f"%((self.z[1]-self.z[0])*Bo2Angs))
         logging.info(" Potentials : dt    [ps] = %.4f"%(self.dt))
         logging.info(" Potentials : t_max [ps] = %.4f"%(self.t[-1]/ps_au))
