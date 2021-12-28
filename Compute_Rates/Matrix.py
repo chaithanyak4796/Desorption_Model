@@ -4,7 +4,7 @@ import logging
 from scipy import integrate, interpolate
 from Params import *
 from joblib import Parallel,delayed
-from pwtools.signal import acorr
+from scipy.fftpack import fft, ifft
 import sys
 
 class Matrix:
@@ -129,12 +129,8 @@ class Matrix:
                 I_s += beta_filon*S_e + gamma_filon*S_o
                 I_s *= dt
                 
-                wnm = (I_c**2 + I_s**2)/(pot.t[-1] - pot.t[0])
-                
-                # I = I_c + 1j * I_s
-                # wnm = abs(I)**2/(pot.t[-1] - pot.t[0])
-                
-                
+                wnm = (I_c**2 + I_s**2)/(pot.t[-1] - pot.t[0])                
+            
             
         if(self.QCF_Model != 'Egl'):
             wnm_corr = wnm * self.compute_QCF(om_nm)
@@ -152,6 +148,21 @@ class Matrix:
          gamma_filon = (4/theta**2)*(np.sin(theta)/theta - np.cos(theta))
          
          return alpha_filon, beta_filon, gamma_filon
+
+    def acorr(v, norm=False):
+        nstep = v.shape[0]
+        c = np.zeros((nstep,), dtype=float)
+        _norm = 1 if norm else 0
+
+        # Correlation via fft. After ifft, the imaginary part is (in theory) =                                                                                                                                                              
+        # 0, in practise < 1e-16, so we are safe to return the real part only.                                                                                                                                                              
+        vv = np.concatenate((v, np.zeros((nstep,),dtype=float)))
+        c = ifft(np.abs(fft(vv))**2.0)[:nstep].real
+
+        if norm:
+            return c / c[0]
+        else:
+            return c
 
     def compute_bound_row(self,pot,eigen,m):
         Wn      = np.zeros((pot.n_bound,))

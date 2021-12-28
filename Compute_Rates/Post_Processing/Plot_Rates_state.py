@@ -8,7 +8,7 @@ Created on Wed Nov 17 15:11:22 2021
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
-plt.close('all')
+# plt.close('all')
 
 if(len(sys.argv) == 1):
     T = 300
@@ -16,24 +16,26 @@ else:
     T = int(sys.argv[1])
 
 dt    = 1.0
-t_max = 50
+t_max = 40
 label = str(dt) + "fs_" + str(t_max) + "ps"
 
-Dir = "/media/chaithanya/Chaithanya_New/Surface_Chem/Desorption/Density_Matrix/Results/Oxygen/Bridge_site/Model_3/"
-Dir = Dir + label + "/"
+# Dir = "/media/chaithanya/Chaithanya_New/Surface_Chem/Desorption/Density_Matrix/Results/Oxygen/Bridge_site/Test_dz/"
+# Dir = "/media/chaithanya/Chaithanya_New/Surface_Chem/Desorption/Density_Matrix/Results/Oxygen/Top_site/Model_3/"
+# Dir = Dir + label + "/"
 
 #label = 'Filon_yes'
 #Dir = "/media/chaithanya/Chaithanya_New/Surface_Chem/Desorption/Density_Matrix/temp/CO_Cu/Integration/"
 #Dir = Dir + label + "/"
 
-# label = "Method_1"
-# Dir = "/media/chaithanya/Chaithanya_New/Surface_Chem/Desorption/Density_Matrix/Results/Oxygen/Bridge_site/Test_dz/"
-# Dir = Dir + label + "/"
+label = "Method_5"
+Dir = "/media/chaithanya/Chaithanya_New/Surface_Chem/Desorption/Density_Matrix/Results/Oxygen/Bridge_site/Test_dz/"
+Dir = Dir + label + "/"
 
 # T = 900
-ini_state = [0,5,10,15,20,25]
+# ini_state = [0,5,10,15,20,25]
+ini_state = [0,10,20,25,30,35]
 colors    = ['b','g','r','c','m','y','k']
-lst       = '-'
+lst       = '--'
 
 pref     = "T_" + str(T) + "K"
 fname_bb = Dir + pref + ".Wbb"
