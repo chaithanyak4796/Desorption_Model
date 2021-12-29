@@ -177,3 +177,31 @@ class Eigen:
             E[i] = -((hbar*pot.alpha)**2/(2*pot.mass)) * (k - i - 0.5)**2 
         return E
 
+    def save_H0(self,pot,Dir):
+        z = pot.z
+
+        fname_state = Dir + "Eigen.states"
+        fname_en    = Dir + "Eigen.energy"
+
+        fst = open(fname_state, "w")
+        fen = open(fname_en, "w")
+
+        for j in range(len(pot.z)):
+            fst.write("%6.4E  "%(z[j]))
+        fst.write("\n")
+        for j in range(len(pot.z)):
+            fst.write("%6.4E  "%(pot.V0[j]))
+        fst.write("\n")
+        
+        for i in range(pot.n_bound + pot.n_cont):
+            fen.write("%3d  %6.4E\n"%(i, pot.Energy[i]))
+            state = self.get_eigenstate(pot,i)
+            for j in range(len(pot.z)):
+                fst.write("%6.4E  "%(state[j]))
+            fst.write("\n")
+
+            
+        fst.close()
+        fen.close()
+        
+

@@ -32,10 +32,11 @@ class Input:
         self.pot_prefix       =  str(parser['POTENTIALS']['Pot_prefix']) 
         self.Merged_Pot_fname =  str(parser['POTENTIALS']['Merged_Pot'])
 
-        self.n_skip      = int(parser['POTENTIALS']['n_skip'])
-        self.interp_t    = float(parser['POTENTIALS']['interp_t'])
-        self.pad_z       = float(parser['POTENTIALS']['pad_z'])
-        self.interp_z    = float(parser['POTENTIALS']['interp_z'])
+        self.n_skip       = int(parser['POTENTIALS']['n_skip'])
+        self.interp_t     = float(parser['POTENTIALS']['interp_t'])
+        self.pad_z        = float(parser['POTENTIALS']['pad_z'])
+        self.interp_z     = float(parser['POTENTIALS']['interp_z'])
+        self.interp_z_int = float(parser['POTENTIALS']['interp_z_int'])
         
         ######## MISC Options #############
     

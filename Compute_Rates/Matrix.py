@@ -27,6 +27,13 @@ class Matrix:
         if(self.QCF_Model == 'Egl'):
             self.Egelstaff_initialize(pot.t)
 
+        self.z            = pot.z
+        self.interp_z_int = Input.interp_z_int
+        if(Input.interp_z_int < 1.0):
+            self.z = self.interpolate_z(Input.interp_z_int,pot.z,pot.z)
+            logging.info(" The z and Vf arrays are to be interpolated during matrix element (Vnm) evaluation.")
+            logging.info(" New dz    [A] = %.4f"%((self.z[1]-self.z[0])*Bo2Angs))
+
     def compute_transition_rates(self, Input, pot, eigen):
         logging.info(" Computing the Bound - Bound transition rates using %d procs"%(self.n_jobs))
         temp = Parallel(n_jobs=self.n_jobs,backend='multiprocessing') (delayed(self.compute_bound_row)(pot,eigen,m) for m in range(pot.n_bound))
@@ -58,7 +65,6 @@ class Matrix:
         logging.info(" Writing the transition rates output files.")
         self.Write_transition_rates(Input,pot,Input.Out_pref)
         
-
        
     def compute_ind_rate(self,pot,eigen,m,n,method=2):
         """ 
@@ -68,15 +74,19 @@ class Matrix:
         """
         if(self.QCF_Model == 'Egl'):
             method = 1
-            
-        eig_n = eigen.get_eigenstate(pot,n)
-        eig_m = eigen.get_eigenstate(pot,m)
+
         om_nm = (pot.Energy[n] - pot.Energy[m])/hbar
 
-        Vnm = np.zeros(pot.Vf.shape[0])
-        for i in range(len(Vnm)):
-            f = eig_n * pot.Vf[i] * eig_m
-            Vnm[i] = integrate.simps(f,pot.z)
+        if(self.interp_z_int == 1.0):
+            eig_n = eigen.get_eigenstate(pot,n)
+            eig_m = eigen.get_eigenstate(pot,m)
+        
+            Vnm = np.zeros(pot.Vf.shape[0])
+            for i in range(len(Vnm)):
+                f = eig_n * pot.Vf[i] * eig_m
+                Vnm[i] = integrate.simps(f,pot.z)
+        else:
+            Vnm = self.get_Vnm(self.interp_z_int,pot,eigen,m,n)
             
         if(self.use_Filon):
             if(len(pot.t) % 2 == 0):
@@ -86,7 +96,7 @@ class Matrix:
             theta    = om_nm*dt            
             
         if(method == 1):
-            Vnm_corr = acorr(Vnm,norm=False)/len(Vnm)
+            Vnm_corr = self.acorr(Vnm,norm=False)/len(Vnm)
             if (self.use_Filon == False):
                 wnm = 2 * integrate.trapz(Vnm_corr*np.cos(om_nm*pot.t),pot.t)
             else:
@@ -149,13 +159,37 @@ class Matrix:
          
          return alpha_filon, beta_filon, gamma_filon
 
-    def acorr(v, norm=False):
+    def get_Vnm(self,interp,pot,eigen,m,n):
+        eig_n = eigen.get_eigenstate(pot,n)
+        eig_m = eigen.get_eigenstate(pot,m)
+
+        eig_n_interp = self.interpolate_z(interp,pot.z,eig_n)
+        eig_m_interp = self.interpolate_z(interp,pot.z,eig_m)
+
+        Vnm = np.zeros(pot.Vf.shape[0])
+        for i in range(len(Vnm)):
+            Vf     = self.interpolate_z(interp,pot.z,pot.Vf[i])
+            f      = eig_n_interp * Vf * eig_m_interp
+            Vnm[i] = integrate.simps(f,self.z)
+        return Vnm
+
+    def interpolate_z(self,interp,x,y):
+        _x  = np.arange(0,x.shape[0])
+        _xp = np.arange(0,x.shape[0],interp)[:-1*int(1.0/interp)+1]
+        temp = np.zeros(_x.shape[0])
+
+        f = interpolate.interp1d(_x,y)
+        temp = f(_xp)
+
+        return temp
+        
+    def acorr(self,v, norm=False):
         nstep = v.shape[0]
         c = np.zeros((nstep,), dtype=float)
         _norm = 1 if norm else 0
 
-        # Correlation via fft. After ifft, the imaginary part is (in theory) =                                                                                                                                                              
-        # 0, in practise < 1e-16, so we are safe to return the real part only.                                                                                                                                                              
+        # Correlation via fft. After ifft, the imaginary part is (in theory) =
+        # 0, in practise < 1e-16, so we are safe to return the real part only. 
         vv = np.concatenate((v, np.zeros((nstep,),dtype=float)))
         c = ifft(np.abs(fft(vv))**2.0)[:nstep].real
 
@@ -346,9 +380,9 @@ class Matrix:
             Vnm[i] = integrate.simps(f,pot.z)
 
         
-        Vnm_corr = acorr(Vnm,norm=False)/len(Vnm) * np.cos(om_nm*pot.t)
+        Vnm_corr = self.acorr(Vnm,norm=False)/len(Vnm) * np.cos(om_nm*pot.t)
         plt.figure(10)
-        plt.plot(pot.t/ps_au,Vnm_corr,'-o',label="(%d,%d)"%(m,n))
+        plt.plot(pot.t/ps_au,Vnm_corr,'.',label="(%d,%d)"%(m,n))
         plt.legend()
         plt.xlabel('t [ps]')
         
@@ -359,7 +393,7 @@ class Matrix:
 
         Vnm = np.zeros(pot.Vf.shape[0])
         for i in range(len(Vnm)):
-            f = eig_n * pot.Vf[i] * eig_m
+            f = 1*eig_n * pot.Vf[i] * eig_m
             Vnm[i] = integrate.simps(f,pot.z)
         
         plt.figure(11)
